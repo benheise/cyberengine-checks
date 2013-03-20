@@ -198,12 +198,17 @@ category: 'answer', property: '<query-property>' # Example property: google-publ
 ```
 
 ### FTP Download
+
 * ipv4/ftp/download
+
 #### Service
+
 ```bash
 name: "FTP Download", version: 'ipv4', protocol: 'ftp'
 ```
+
 #### Properties
+
 ```bash
 # Uses random user
 # Macro: $USER replaced with current user
@@ -215,12 +220,17 @@ category: 'answer', property: 'full-text-regex'
 ```
 
 ### FTP Upload
+
 * ipv4/ftp/upload
+
 #### Service
+
 ```bash
 name: "FTP Upload", version: 'ipv4', protocol: 'ftp'
 ```
+
 #### Properties
+
 ```bash
 # Uses random user
 # Macro: $USER replaced with current user
@@ -233,12 +243,17 @@ category: 'answer', property: 'full-text-regex'
 ```
 
 ### HTTP Available
+
 * ipv4/http/available
+
 #### Service
+
 ```bash
 name: "HTTP Available", version: 'ipv4', protocol: 'http'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
@@ -249,12 +264,17 @@ category: 'answer', property: 'full-text-regex'
 ```
  
 ### HTTP Content
+
 * ipv4/http/available
+
 #### Service
+
 ```bash
 name: "HTTP Content", version: 'ipv4', protocol: 'http'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
@@ -265,12 +285,17 @@ category: 'answer', property: 'full-text-regex'
 ```
  
 ### HTTPS Available
+
 * ipv4/https/available
+
 #### Service
+
 ```bash
 name: "HTTPS Available", version: 'ipv4', protocol: 'https'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
@@ -281,12 +306,17 @@ category: 'answer', property: 'full-text-regex'
 ```
  
 ### HTTPS Content
+
 * ipv4/https/available
+
 #### Service
+
 ```bash
 name: "HTTPS Content", version: 'ipv4', protocol: 'https'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
@@ -297,12 +327,17 @@ category: 'answer', property: 'full-text-regex'
 ```
 
 ### ICMP Ping
+
 * ipv4/icmp/ping
+
 #### Service
+
 ```bash
 name: "ICMP Ping", version: 'ipv4', protocol: 'icmp'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
@@ -311,12 +346,17 @@ category: 'answer', property: 'full-text-regex'
 ```
 
 #### POP3 Login
+
 * ipv4/pop3/login
+
 #### Service
+
 ```bash
 name: "POP3 Login", version: 'ipv4', protocol: 'pop3'
 ```
+
 #### Properties
+
 ```bash
 # Uses random user
 category: 'address'
@@ -326,12 +366,17 @@ category: 'answer', property: 'full-text-regex'
 ```
 
 #### SMTP Send Mail
+
 * ipv4/smtp/send-mail
+
 #### Service
+
 ```bash
 name: "SMTP Send Mail", version: 'ipv4', protocol: 'smtp'
 ```
+
 #### Properties
+
 ```bash
 # Uses random user
 category: 'address'
@@ -346,12 +391,17 @@ category: 'random', property: 'from-user' # Defaults to random user
 ```
  
 #### SSH Login
+
 * ipv4/ssh/login
+
 #### Service
+
 ```bash
 name: "SSH Login", version: 'ipv4', protocol: 'ssh'
 ```
+
 #### Properties
+
 ```bash
 # Uses random user
 # Macro: $USER replaced with current user
