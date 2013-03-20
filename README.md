@@ -178,12 +178,17 @@ category: 'answer'
 ## Available Checks ##
 
 ### DNS Domain Query
+
 * ipv4/dns/domain-query
+
 #### Service
+
 ```bash
 name: "DNS Domain Query", version: 'ipv4', protocol: 'dns'
 ```
+
 #### Properties
+
 ```bash
 category: 'address'
 category: 'option', property: 'timeout'
