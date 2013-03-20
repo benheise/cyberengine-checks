@@ -1,0 +1,13 @@
+# Used to track directories
+!.gitkeep
+
+# Ignore these directories
+/logs
+/pids
+
+# Ignore other unneeded files.
+.Gemfile.lock
+*.swp
+*~
+.project
+.DS_Store
