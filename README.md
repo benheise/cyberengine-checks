@@ -64,7 +64,7 @@ vi database.yml # COMMENT OUT UNUSED ENVIRONMENTS
 
 ### Basics
 * Checks are identified by their path
-* <version>/<protocol>/<check>
+* version/protocol/check
 * The cyberengine executable is a fully functional wrapper that makes it easy to stop/start enable/disable checks
 * Checks can be run in the forground or as daemons. As a daemon they log to their log file and can be terminated by sending the TERM signal.
 
