@@ -69,6 +69,7 @@ vi database.yml # COMMENT OUT UNUSED ENVIRONMENTS
 * Checks can be run in the forground or as daemons. As a daemon they log to their log file and can be terminated by sending the TERM signal.
 
 ### Usage
+
 * Getting information
 ```bash
 ./cyberengine help
