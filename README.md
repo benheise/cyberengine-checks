@@ -107,6 +107,7 @@ Enabled : ipv4/ssh/login
 ```
 
 * Start checks
+
 ```bash
 ./cyberengine list
 ./cyberengine enable all
@@ -114,11 +115,13 @@ Enabled : ipv4/ssh/login
 ```
 
 * Testing checks (no checks will be saved)
+
 ```bash
 ./cyberengine test ipv4/ssh/login
 ```
 
 * Stopping checks
+
 ```bash
 ./cyberengine status
 ./cyberengine stop ipv4/ssh/login # Check will stop at end of round
@@ -128,6 +131,7 @@ kill -s TERM <pid>
 
 * You can check for errors or watch log files
 
+
 ```bash
 ./cyberengine errors ipv4/ssh/login
 ./cyberengine tail ipv4/ssh/login
@@ -135,6 +139,7 @@ kill -s TERM <pid>
 
 * All macro makes it easy to do mass changes
 * No argument equals all
+
 ```bash
 ./cyberengine enable all
 ./cyberengine enable # Same as above
@@ -142,12 +147,15 @@ kill -s TERM <pid>
 ```
 
 ## Check Options
+
 ### Properties
+
 * Defaults defined on whiteteam
 * Individual team options override whiteteam options
 * Properties always lowercase and hyphen delimiters - Example: Send Mail = send-mail
 
 #### Property Categories
+
 ```bash
 # There are four property categories
 # Defines a service address (each check will be run against all addresses)
