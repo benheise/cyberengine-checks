@@ -70,7 +70,9 @@ vi database.yml # COMMENT OUT UNUSED ENVIRONMENTS
 
 
 ### Usage
+
 * Getting information
+
 ```bash
 ./cyberengine help
 Syntax: cyberengine.rb <command> <check> <check>...
