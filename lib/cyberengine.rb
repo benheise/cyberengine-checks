@@ -46,7 +46,7 @@ module Cyberengine
 
   def root_dir; File.dirname(File.expand_path(File.dirname(__FILE__))) end
   def checks_dir; Cyberengine.root_dir + '/checks' end
-  def setup_dir; Cyberengine.root_dir + '/setup' end
+  def setup_dir; Cyberengine.root_dir + '' end
   def log_dir; Cyberengine.root_dir + '/logs' end
   def pid_dir; Cyberengine.root_dir + "/pids" end
   def database_file; Cyberengine.setup_dir + '/database.yml' end
