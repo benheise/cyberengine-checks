@@ -175,6 +175,30 @@ category: 'answer'
 * Majority of checks use unix command line tools such as curl. This is to make it easier to debug. While many could be completly written using a language library, it would be difficult to troubleshoot errors for both blueteams and whiteteam.
 
 
+## Mobility
+
+#### IPV4 Mobility
+
+* ipv4/none/mobility
+* This is not a service check and is only defined for whiteteam. This service is used to configure random source ipv4 addresses. A new address is added to an alias interface based on properties. The use of this address is forced by a iptables POSTROUTING option that changes the source address of all outbound traffic from the interface
+
+#### Service
+
+```bash
+name: "IPV4 Mobility", version: 'ipv4', protocol: 'none'
+```
+
+#### Properties
+
+```bash
+category: 'random', property: 'address-range' # Range to pick random address from
+category: 'option', property: 'netmask' # Netmask to use with address-range
+category: 'option', property: 'interface' # Interface to add the random address on
+category: 'option', property: 'dad_test' # Test used to see if arping failed
+category: 'option', property: 'delay' # Delay between address changes
+```
+
+
 ## Available Checks ##
 
 ### DNS Domain Query
