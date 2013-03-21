@@ -266,6 +266,51 @@ category: 'answer', property: 'each-line-regex'
 category: 'answer', property: 'full-text-regex'
 ```
 
+### FTPS Download
+
+* ipv4/ftps/download
+
+#### Service
+
+```bash
+name: "FTPS Download", version: 'ipv4', protocol: 'ftps'
+```
+
+#### Properties
+
+```bash
+# Uses random user
+# Macro: $USER replaced with current user
+category: 'address'
+category: 'option', property: 'timeout'
+category: 'option', property: 'filename' # file the check attempts to download. Can be a path such as /var/log/messages
+category: 'answer', property: 'each-line-regex'
+category: 'answer', property: 'full-text-regex'
+```
+
+### FTPS Upload
+
+* ipv4/ftps/upload
+
+#### Service
+
+```bash
+name: "FTPS Upload", version: 'ipv4', protocol: 'ftps'
+```
+
+#### Properties
+
+```bash
+# Uses random user
+# Macro: $USER replaced with current user
+category: 'address'
+category: 'option', property: 'timeout'
+category: 'option', property: 'filename' # file the check attempts to upload
+category: 'option', property: 'filename-timestamp' # disabled = no filename timestamp
+category: 'answer', property: 'each-line-regex'
+category: 'answer', property: 'full-text-regex'
+```
+
 ### HTTP Available
 
 * ipv4/http/available
@@ -389,6 +434,26 @@ category: 'answer', property: 'each-line-regex'
 category: 'answer', property: 'full-text-regex'
 ```
 
+#### POP3S Login
+
+* ipv4/pop3s/login
+
+#### Service
+
+```bash
+name: "POP3S Login", version: 'ipv4', protocol: 'pop3s'
+```
+
+#### Properties
+
+```bash
+# Uses random user
+category: 'address'
+category: 'option', property: 'timeout'
+category: 'answer', property: 'each-line-regex'
+category: 'answer', property: 'full-text-regex'
+```
+
 #### SMTP Send Mail
 
 * ipv4/smtp/send-mail
@@ -397,6 +462,31 @@ category: 'answer', property: 'full-text-regex'
 
 ```bash
 name: "SMTP Send Mail", version: 'ipv4', protocol: 'smtp'
+```
+
+#### Properties
+
+```bash
+# Uses random user
+category: 'address'
+category: 'option', property: 'timeout'
+category: 'random', property: 'from-domain'
+category: 'answer', property: 'each-line-regex'
+category: 'answer', property: 'full-text-regex'
+# Optional
+category: 'random', property: 'rcpt-user' # Defaults to random user
+category: 'random', property: 'rcpt-domain' # Defaults to from-domain
+category: 'random', property: 'from-user' # Defaults to random user
+```
+
+#### SMTPS Send Mail
+
+* ipv4/smtps/send-mail
+
+#### Service
+
+```bash
+name: "SMTPS Send Mail", version: 'ipv4', protocol: 'smtps'
 ```
 
 #### Properties
