@@ -1,0 +1,127 @@
+#!/usr/bin/env ruby
+require_relative '../../../lib/cyberengine'
+@mobility = Cyberengine.mobility(__FILE__,ARGV.dup)
+@cyberengine = Cyberengine::Mobility.new(@mobility)
+@service = @cyberengine.service
+@cyberengine.signals
+
+
+def flush_mobility_interface
+  @service.properties.temps('previous-address').destroy_all
+  @service.properties.temps('current-address').destroy_all
+  command = "ip -4 addr flush dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
+  @cyberengine.logger.info { "Flushing cyberengine aliases: #{command}" }
+  Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+end
+
+
+def update_mobility
+  @mobility[:dad_test] = @service.properties.option('dad-test')
+  @mobility[:netmask] = @service.properties.option('netmask')
+  @mobility[:interface] = @service.properties.option('interface')
+  @mobility[:new_address] = address_from_ipv4_range(@service.properties.random('address-range'))
+  @mobility[:current_address] = @service.properties.temp('current-address')
+  @mobility[:previous_address] = @service.properties.temp('previous-address')
+  @mobility[:delay] = @service.properties.option('delay').to_i
+  @mobility[:delay] = 15 if @mobility[:delay] < 15
+end
+
+
+def address_from_ipv4_range(range)
+  range.split(".").map do |octet|
+    octet =~ /\d+\-\d+/ ? rand(octet.split('-')[0].to_i..octet.split('-')[1].to_i) : octet
+  end.join('.')
+end
+
+
+def duplicate_address_detected?
+  if @mobility[:new_address] == @mobility[:current_address]
+    @cyberengine.logger.info { "Duplicate address detected: New address #{@mobility[:new_address]} equals current address #{@mobility[:current_address]}" }
+    return true
+  end
+  command = "arping -c 1 -w 5 -D -f -I #{@mobility[:interface]} #{@mobility[:new_address]}"
+  @cyberengine.logger.debug { "Checking if address is in use: #{command}" }
+  Cyberengine.shellexecute(command) do |output| 
+    if output.include?(@mobility[:dad_test]) 
+      @cyberengine.logger.info { "Duplicate address detected: #{output}" }
+      return true 
+    end
+  end
+  false
+end
+
+ 
+def delete_previous_address
+  unless @mobility[:previous_address].nil?
+    @service.properties.temps('previous-address').destroy_all
+    command = "ip -4 addr del #{@mobility[:previous_address]}#{@mobility[:netmask]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
+    @cyberengine.logger.info { "Deleting previous ipv4 address: #{command}" }
+    Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+  end 
+end 
+
+
+def migrate_current_address
+  @service.properties.temps('current-address').update_all(property: 'previous-address')
+end 
+
+
+def add_new_address
+  # Assign new address
+  unless @mobility[:new_address].nil?
+    Property.create(team_id: @service.team_id, server_id: @service.server_id, service_id: @service.id, category: 'temp', property: 'current-address', value: @mobility[:new_address], visible: true)
+    command = "ip -4 addr add #{@mobility[:new_address]}#{@mobility[:netmask]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
+    @cyberengine.logger.info { "Adding new ipv4 address: #{command}" }
+    Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+  end
+
+  # Force new source address via iptables
+  command = "iptables -t nat -I POSTROUTING 1 -o #{@mobility[:interface]} -j SNAT --to #{@mobility[:new_address]}"
+  @cyberengine.logger.info { "Setting default source address: #{command}" }
+  Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+  # Delete old iptables rules
+  command = "iptables -t nat -L POSTROUTING -n --line-numbers"
+  Cyberengine.shellexecute(command) do |line|
+    rule = line.split(/\s/).first.to_i
+    if rule != 0 && rule != 1
+      command = "iptables -t nat -D POSTROUTING 2"
+      @cyberengine.logger.info { "Deleting old POSTROUTING rule: #{line}" }
+      Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+    end
+  end
+end
+
+
+begin
+  # Get current properties
+  update_mobility
+
+  # Flush any leftover addresses
+  flush_mobility_interface
+
+  # Loop until terminated (TERM Signal)
+  until @cyberengine.stop
+    begin
+      # Get current properties
+      update_mobility
+
+      # Update address
+      unless duplicate_address_detected?
+        delete_previous_address
+        migrate_current_address
+        add_new_address
+      end
+    rescue StandardError => exception
+      @cyberengine.exception_handler(@mobility,exception)
+    end
+    
+    # Wait before next switch
+    unless @cyberengine.stop
+      @cyberengine.logger.info { "Sleeping for #{@mobility[:delay]} seconds between ip changes" }
+      sleep @mobility[:delay]
+    end
+  end
+rescue StandardError => exception
+  @cyberengine.fatal_exception_handler(exception)
+end
+@cyberengine.terminate

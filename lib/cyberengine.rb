@@ -1,5 +1,6 @@
 require_relative 'checker'
 require_relative 'database'
+require_relative 'mobility'
 require_relative 'logging/logging'
 
 module Cyberengine
@@ -18,9 +19,29 @@ module Cyberengine
     check[:log_dir] = Cyberengine.log_dir + "/#{check[:version]}/#{check[:protocol]}"
     check[:pid_file] = check[:pid_dir] + "/#{check[:basename]}.pid"
     check[:log_file] = check[:log_dir] + "/#{check[:basename]}.log"
-    check[:enabled] = check[:path] !~ check_disable_regex
-    check[:disabled] = check[:path] =~ check_disable_regex
+    check[:enabled] = check[:path] !~ config_disable_regex
+    check[:disabled] = check[:path] =~ config_disable_regex
     check
+  end
+
+  def mobility(file,args=[],options={})
+    mobility = Hash.new
+    mobility[:path] = File.expand_path(file)
+    mobility[:version] = path_version(mobility[:path])
+    mobility[:protocol] = path_protocol(mobility[:path])
+    mobility[:basename] = path_basename(mobility[:path])
+    mobility[:name] = mobility[:version].upcase + ' ' + path_name(mobility[:path])
+    mobility[:delay] = options[:delay].to_i <= 5 ? 5 : options[:delay].to_i 
+    mobility[:label] = ':cybereng'
+    mobility[:test] = args.include?('test') ? true : false
+    mobility[:daemon] = args.include?('daemon') ? true : false
+    mobility[:pid_dir] = Cyberengine.pid_dir + "/#{mobility[:version]}/#{mobility[:protocol]}"
+    mobility[:log_dir] = Cyberengine.log_dir + "/#{mobility[:version]}/#{mobility[:protocol]}"
+    mobility[:pid_file] = mobility[:pid_dir] + "/#{mobility[:basename]}.pid"
+    mobility[:log_file] = mobility[:log_dir] + "/#{mobility[:basename]}.log"
+    mobility[:enabled] = mobility[:path] !~ config_disable_regex
+    mobility[:disabled] = mobility[:path] =~ config_disable_regex
+    mobility
   end
 
   def path_version(path) path.split('/')[-3] end
@@ -28,21 +49,21 @@ module Cyberengine
   def path_basename(path) File.basename(path).split('.').first end
   def path_name(path) path_basename(path).split('-').map {|w| w.capitalize }.join(' ') end
 
-  def check_id(check) check[:id] end
-  def check_delay(check) check[:delay] end
-  def check_name(check) check[:name] end
-  def check_version(check) check[:version] end
-  def check_protocol(check) check[:protocol] end
-  def check_test(check) check[:test] end
-  def check_daemon(check) check[:daemon] end
-  def check_log_dir(check) check[:log_dir] end
-  def check_pid_dir(check) check[:pid_dir] end
-  def check_log_file(check) check[:log_file] end
-  def check_pid_file(check) check[:pid_file] end
-  def check_enabled?(check) check[:enabled] end
-  def check_disabled?(check) check[:disabled] end
-  def check_disable_regex; /\.disabled?\z/ end
-  def check_disable_text; '.disabled' end
+  def config_id(check) check[:id] end
+  def config_delay(check) check[:delay] end
+  def config_name(check) check[:name] end
+  def config_version(check) check[:version] end
+  def config_protocol(check) check[:protocol] end
+  def config_test(check) check[:test] end
+  def config_daemon(check) check[:daemon] end
+  def config_log_dir(check) check[:log_dir] end
+  def config_pid_dir(check) check[:pid_dir] end
+  def config_log_file(check) check[:log_file] end
+  def config_pid_file(check) check[:pid_file] end
+  def config_enabled?(check) check[:enabled] end
+  def config_disabled?(check) check[:disabled] end
+  def config_disable_regex; /\.disabled?\z/ end
+  def config_disable_text; '.disabled' end
 
   def root_dir; File.dirname(File.expand_path(File.dirname(__FILE__))) end
   def checks_dir; Cyberengine.root_dir + '/checks' end
@@ -51,6 +72,7 @@ module Cyberengine
   def pid_dir; Cyberengine.root_dir + "/pids" end
   def database_file; Cyberengine.setup_dir + '/database.yml' end
 
+  def create_path(path) FileUtils.mkdir_p(path) unless File.directory?(path) end
   def clear_color; "\e[0m" end
   def start_color(color)
     # Format color to equal map
@@ -69,13 +91,12 @@ module Cyberengine
   def daemonize(check)
     return get_pid(check) if get_pid(check)
     Process.daemon
-    File.open(check_pid_file(check),'w') {|file| file.write(Process.pid) }
+    File.open(config_pid_file(check),'w') {|file| file.write(Process.pid) }
     false # Anything but false means failure
   end
 
-
   def get_pid(check)
-    pid_file = Cyberengine.check_pid_file(check)
+    pid_file = Cyberengine.config_pid_file(check)
     if File.exists?(pid_file) && File.readable?(pid_file)
       pid = File.read(pid_file).to_i
       begin
@@ -103,12 +124,12 @@ module Cyberengine
   # Run command yielding output
   def shellexecute(command)
     SafePty.spawn(command) do |stdout, stdin, pid|
-      stdout.each_line { |line| yield line }
+      stdout.each_line { |line| yield line, pid }
     end
   end
 
   # Check running?
-  def check_running?(check)
+  def config_running?(check)
     pid = get_pid(check)
     pid ? { status: true, message: "Running with pid #{pid}" } : { status: false, message: "Not running" }
   end
@@ -130,7 +151,7 @@ module Cyberengine
   end
 
   # Find errors in log files
-  def find_check_errors(check)
+  def find_config_errors(check)
     log_file = check[:log_file]
     if File.exists?(log_file) && File.readable?(log_file)
       Cyberengine.shellexecute('grep -H -n -v -E "(DEBUG|INFO)" ' + log_file) { |line| yield line }
@@ -161,8 +182,8 @@ module Cyberengine
   def disable_check(check)
     path = check[:path]
     if File.exists?(path) && File.readable?(path) 
-      File.rename(path,path + check_disable_text) unless check[:disabled]
-      return { status: true, message: 'Appended ' + check_disable_text + ' to check filename' }
+      File.rename(path,path + config_disable_text) unless check[:disabled]
+      return { status: true, message: 'Appended ' + config_disable_text + ' to check filename' }
     end
     { status: false, message: "Check path #{path} does not exist or is not readable" }
   end
@@ -171,8 +192,8 @@ module Cyberengine
   def enable_check(check)
     path = check[:path]
     if File.exists?(path) && File.readable?(path)
-      File.rename(path,path.gsub(check_disable_regex,'')) unless check[:enabled]
-      return { status: true, message: 'Removed ' + check_disable_text + ' from check filename' }
+      File.rename(path,path.gsub(config_disable_regex,'')) unless check[:enabled]
+      return { status: true, message: 'Removed ' + config_disable_text + ' from check filename' }
     end
     { status: false, message: "Check path #{path} does not exist or is not readable" }
   end

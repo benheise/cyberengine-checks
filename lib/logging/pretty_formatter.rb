@@ -40,8 +40,8 @@ module Cyberengine
       # PID - unused currently
       size = Process.pid.size
       pid = Process.pid.to_s
-      #pid = Cyberengine.start_color(:yellow) + Process.pid.to_s + Cyberengine.clear_color
-      #pid.prepend("pid:")
+      pid = Cyberengine.start_color(:yellow) + Process.pid.to_s + Cyberengine.clear_color
+      pid.prepend("pid:")
       
       # Time
       time = time.strftime("%Y-%m-%d %H:%M:%S.") << time.usec.to_s[0..2].rjust(3)
@@ -73,8 +73,8 @@ module Cyberengine
       size = severity.length
   
       # Colorize severity
-      #severity.gsub!(/\A\[/, '[' + Cyberengine.start_color(color))
-      #severity.gsub!(/\]\z/, Cyberengine.clear_color + ']')
+      severity.gsub!(/\A\[/, '[' + Cyberengine.start_color(color))
+      severity.gsub!(/\]\z/, Cyberengine.clear_color + ']')
   
       # Format with spaces before string 
       # sprintf unreliable because of invisible color characters
@@ -99,16 +99,16 @@ module Cyberengine
       sql.gsub!(model_regex,'') if model
   
       # Colorize SQL commands
-      #sql_queries = sql.split(/\[\[.*\]\]/)
-      #sql_queries.each do |query| 
-      #  colored = query.split(/\s+/).map do |word|
-      #    word =~ /\A#{@sql}\z/ ? Cyberengine.start_color(:green) + word.to_s + Cyberengine.clear_color : word
-      #  end.join(' ')
-      #  sql.gsub!(query,colored)
-      #end
+      sql_queries = sql.split(/\[\[.*\]\]/)
+      sql_queries.each do |query| 
+        colored = query.split(/\s+/).map do |word|
+          word =~ /\A#{@sql}\z/ ? Cyberengine.start_color(:green) + word.to_s + Cyberengine.clear_color : word
+        end.join(' ')
+        sql.gsub!(query,colored)
+      end
   
       # Colorize model
-      #model = Cyberengine.start_color(:green) + model + Cyberengine.clear_color if model
+      model = Cyberengine.start_color(:green) + model + Cyberengine.clear_color if model
   
       # Return captures
       captures = Hash.new
@@ -126,7 +126,7 @@ module Cyberengine
       msg.gsub!(loadtime_regex,'') if loadtime
   
       # Colorize loadtime
-      # loadtime = Cyberengine.start_color(:yellow) + loadtime + Cyberengine.clear_color if loadtime
+      loadtime = Cyberengine.start_color(:yellow) + loadtime + Cyberengine.clear_color if loadtime
   
       # Return captures
       captures = Hash.new

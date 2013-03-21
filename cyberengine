@@ -98,6 +98,7 @@ def tail
     log_file = @checks[id][:log_file]
     tail << log_file + ' ' if File.exists?(log_file) && File.readable?(log_file)
   end
+  tail << ' | grep -v DEBUG'
   Cyberengine.shellexecute(tail) do |output|
     puts output
   end
@@ -107,7 +108,7 @@ end
 def errors
   @ids.each do |id|
     puts "Checking: #{id}"
-    Cyberengine.find_check_errors(@checks[id]) do |output|
+    Cyberengine.find_config_errors(@checks[id]) do |output|
       puts output
     end
   end
@@ -116,8 +117,8 @@ end
 # List enabled/disabled checks
 def list
   @ids.each do |id|
-    print Cyberengine.green('Enabled') if Cyberengine.check_enabled?(@checks[id]) 
-    print Cyberengine.red('Disabled') if Cyberengine.check_disabled?(@checks[id]) 
+    print Cyberengine.green('Enabled') if Cyberengine.config_enabled?(@checks[id]) 
+    print Cyberengine.red('Disabled') if Cyberengine.config_disabled?(@checks[id]) 
     puts ' : ' + id
   end
 end
@@ -125,7 +126,7 @@ end
 # List enabled checks
 def enabled
   @ids.each do |id|
-    if Cyberengine.check_enabled?(@checks[id]) 
+    if Cyberengine.config_enabled?(@checks[id]) 
       puts Cyberengine.green('Enabled') + ' : ' + id
     end
   end
@@ -134,7 +135,7 @@ end
 # List disabled checks
 def disabled
   @ids.each do |id|
-    if Cyberengine.check_disabled?(@checks[id]) 
+    if Cyberengine.config_disabled?(@checks[id]) 
       puts Cyberengine.red('Disabled') + ' : ' + id
     end
   end
@@ -167,14 +168,14 @@ end
 # Running checks
 def status
   @ids.each do |id|
-    if Cyberengine.check_enabled?(@checks[id])
+    if Cyberengine.config_enabled?(@checks[id])
       print Cyberengine.green('Enabled') + ' : ' 
-      status = Cyberengine.check_running?(@checks[id])
+      status = Cyberengine.config_running?(@checks[id])
       print status[:status] ? Cyberengine.green(status[:message]) : Cyberengine.red(status[:message])
       print ' : '
     else 
       print Cyberengine.red('Disabled') + ' : ' 
-      status = Cyberengine.check_running?(@checks[id])
+      status = Cyberengine.config_running?(@checks[id])
       print status[:status] ? Cyberengine.green(status[:message]) : Cyberengine.red(status[:message])
       print ' : '
     end
@@ -184,7 +185,7 @@ end
 
 # Help text
 def help 
-  puts "Syntax: cyberengine.rb <command> <check> <check>..."
+  puts "Syntax: cyberengine <command> <check> <check>..."
   puts ""
   puts "<check>:"
   puts "all => match all checks"

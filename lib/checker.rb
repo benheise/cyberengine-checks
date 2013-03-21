@@ -5,19 +5,18 @@ module Cyberengine
     require 'timeout'
     require 'pty'
   
-    attr_reader :id, :check, :name, :delay, :test, :daemon, :logger, :connection, :whiteteam, :pid, :stop
     # Defaults: Cyberengine.checkify
+    attr_reader :id, :check, :delay, :test, :daemon, :logger, :whiteteam, :pid, :stop
     def initialize(check)
       @check = check
-      @id = Cyberengine.check_id(@check)
-      @name = Cyberengine.check_name(@check)
-      @delay = Cyberengine.check_delay(@check) 
-      @test = Cyberengine.check_test(@check)
-      @daemon = Cyberengine.check_daemon(@check)
+      @id = Cyberengine.config_id(@check)
+      @delay = Cyberengine.config_delay(@check) 
+      @test = Cyberengine.config_test(@check)
+      @daemon = Cyberengine.config_daemon(@check)
 
       # Create pid/log paths
-      create_path(Cyberengine.check_log_dir(@check))
-      create_path(Cyberengine.check_pid_dir(@check))
+      Cyberengine.create_path(Cyberengine.config_log_dir(@check))
+      Cyberengine.create_path(Cyberengine.config_pid_dir(@check))
   
       # Used for signals
       @stop = false
@@ -48,15 +47,12 @@ module Cyberengine
 
     # Delete pid file 
     def terminate
-      pid_file = Cyberengine.check_pid_file(@check)
+      pid_file = Cyberengine.config_pid_file(@check)
       File.delete(pid_file) if @daemon && File.exists?(pid_file)
       @logger.info { "Successfully terminated" } 
       @logger.close
       exit
     end
-
-    # Create pid/log paths 
-    def create_path(path) FileUtils.mkdir_p(path) unless File.directory?(path) end
 
     # Trap TERM signal and exit
     def signals
@@ -67,9 +63,9 @@ module Cyberengine
     end
 
     def defaults
-      name = Cyberengine.check_name(@check)
-      version = Cyberengine.check_version(@check)
-      protocol = Cyberengine.check_protocol(@check)
+      name = Cyberengine.config_name(@check)
+      version = Cyberengine.config_version(@check)
+      protocol = Cyberengine.config_protocol(@check)
       Service.where('team_id = ? AND name = ? AND version = ? AND protocol = ? AND enabled = ?', @whiteteam.id, name, version, protocol, false).first
     end
   
@@ -137,16 +133,16 @@ module Cyberengine
       check[:request] = request
       check[:response] = response
       check = Check.create(check)
-      check.destroy if Cyberengine.check_test(@check)
+      check.destroy if Cyberengine.config_test(@check)
       check
     end
  
      
     # Get services and return in array
     def services
-      name = Cyberengine.check_name(@check)
-      version = Cyberengine.check_version(@check)
-      protocol = Cyberengine.check_protocol(@check)
+      name = Cyberengine.config_name(@check)
+      version = Cyberengine.config_version(@check)
+      protocol = Cyberengine.config_protocol(@check)
       blueteams = Team.blueteams.map{|t| t.id }
       services = Service.where('team_id IN (?) AND name = ? AND version = ? AND protocol = ? AND enabled = ?', blueteams, name, version, protocol, true)
       services.map{|s| s }
@@ -163,12 +159,5 @@ class String
   # Add timestamp to string (filenames)
   def timestamped
     self << '-' << Time.now.strftime('%Y-%m-%d-%H-%M-%S')
-  end
-end
-  
-class File
-  # Get check's filename
-  def myname(file)
-    File.basename(file).split('.').first.to_s
   end
 end

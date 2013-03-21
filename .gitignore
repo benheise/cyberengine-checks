@@ -6,7 +6,7 @@
 /pids
 
 # Ignore other unneeded files.
-.Gemfile.lock
+Gemfile.lock
 *.swp
 *~
 .project

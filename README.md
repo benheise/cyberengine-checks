@@ -31,7 +31,7 @@ reboot
 2. Install all required packages for: checks, rvm/ruby, database, and apache
 ```bash
 # Basic/Checks
-yum install -y bash tar git curl curl-devel bind-utils vim
+yum install -y bash tar git curl curl-devel vim bind-utils iputils iptables iproute
 # RVM/Ruby (copied from: rvm requirements) 
 yum install -y gcc-c++ patch readline readline-devel zlib zlib-devel libyaml-devel libffi-devel openssl-devel make bzip2 autoconf automake libtool bison iconv-devel
 # Database
