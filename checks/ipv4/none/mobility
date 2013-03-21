@@ -9,7 +9,7 @@ require_relative '../../../lib/cyberengine'
 def flush_mobility_interface
   @service.properties.temps('previous-address').destroy_all
   @service.properties.temps('current-address').destroy_all
-  command = "ip -4 addr flush dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
+  command = "ip -4 addr flush dev #{@mobility[:interface]} scope global label #{@mobility[:interface_alias]}"
   @cyberengine.logger.info { "Flushing cyberengine aliases: #{command}" }
   Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
 end
@@ -17,33 +17,42 @@ end
 
 def update_mobility
   @mobility[:dad_test] = @service.properties.option('dad-test')
-  @mobility[:netmask] = @service.properties.option('netmask')
   @mobility[:interface] = @service.properties.option('interface')
-  @mobility[:new_address] = address_from_ipv4_range(@service.properties.random('address-range'))
+  @mobility[:interface_alias] = @mobility[:interface].to_s + @mobility[:label].to_s
+  @mobility[:new_range] = @service.properties.random('address-range')
+  @mobility[:new_ip] = address_from_range(@mobility[:new_range])
+  @mobility[:new_mask] = mask_from_range(@mobility[:new_range])
+  @mobility[:new_address] = @mobility[:new_ip].to_s + @mobility[:new_mask].to_s
   @mobility[:current_address] = @service.properties.temp('current-address')
   @mobility[:previous_address] = @service.properties.temp('previous-address')
+  @mobility[:default_gateway] = @service.properties.option('default-gateway')
+  @mobility[:routes] = @service.properties.options('route').map { |p| p.value }
   @mobility[:delay] = @service.properties.option('delay').to_i
   @mobility[:delay] = 15 if @mobility[:delay] < 15
+  puts @mobility.to_s
 end
 
 
-def address_from_ipv4_range(range)
-  range.split(".").map do |octet|
+def address_from_range(range)
+  range.split('/').first.split(".").map do |octet|
     octet =~ /\d+\-\d+/ ? rand(octet.split('-')[0].to_i..octet.split('-')[1].to_i) : octet
   end.join('.')
+end
+def mask_from_range(range) 
+  range.split('/').size == 2 ? range.split('/').last.prepend('/') : '' 
 end
 
 
 def duplicate_address_detected?
-  if @mobility[:new_address] == @mobility[:current_address]
-    @cyberengine.logger.info { "Duplicate address detected: New address #{@mobility[:new_address]} equals current address #{@mobility[:current_address]}" }
+  if @mobility[:new_ip] == @mobility[:current_address]
+    @cyberengine.logger.info { "Duplicate ip detected: New ip #{@mobility[:new_ip]} equals current ip #{@mobility[:current_address]}" }
     return true
   end
-  command = "arping -c 1 -w 5 -D -f -I #{@mobility[:interface]} #{@mobility[:new_address]}"
-  @cyberengine.logger.debug { "Checking if address is in use: #{command}" }
+  command = "arping -c 1 -w 5 -D -f -I #{@mobility[:interface]} #{@mobility[:new_ip]}"
+  @cyberengine.logger.debug { "Checking if new ip is in use: #{command}" }
   Cyberengine.shellexecute(command) do |output| 
     if output.include?(@mobility[:dad_test]) 
-      @cyberengine.logger.info { "Duplicate address detected: #{output}" }
+      @cyberengine.logger.info { "Duplicate ip detected: #{output}" }
       return true 
     end
   end
@@ -54,8 +63,8 @@ end
 def delete_previous_address
   unless @mobility[:previous_address].nil?
     @service.properties.temps('previous-address').destroy_all
-    command = "ip -4 addr del #{@mobility[:previous_address]}#{@mobility[:netmask]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
-    @cyberengine.logger.info { "Deleting previous ipv4 address: #{command}" }
+    command = "ip -4 addr del #{@mobility[:previous_address]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface_alias]}"
+    @cyberengine.logger.info { "Deleting previous ip: #{command}" }
     Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
   end 
 end 
@@ -66,31 +75,31 @@ def migrate_current_address
 end 
 
 
-def add_new_address
+def add_new_ip
   # Assign new address
-  unless @mobility[:new_address].nil?
+  unless @mobility[:new_ip].nil?
     Property.create(team_id: @service.team_id, server_id: @service.server_id, service_id: @service.id, category: 'temp', property: 'current-address', value: @mobility[:new_address], visible: true)
-    command = "ip -4 addr add #{@mobility[:new_address]}#{@mobility[:netmask]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface]}#{@mobility[:label]}"
-    @cyberengine.logger.info { "Adding new ipv4 address: #{command}" }
+    command = "ip -4 addr add #{@mobility[:new_address]} dev #{@mobility[:interface]} scope global label #{@mobility[:interface_alias]}"
+    @cyberengine.logger.info { "Adding new ip: #{command}" }
     Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
-  end
-
-  # Force new source address via iptables
-  command = "iptables -t nat -I POSTROUTING 1 -o #{@mobility[:interface]} -j SNAT --to #{@mobility[:new_address]}"
-  @cyberengine.logger.info { "Setting default source address: #{command}" }
-  Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
-  # Delete old iptables rules
-  command = "iptables -t nat -L POSTROUTING -n --line-numbers"
-  Cyberengine.shellexecute(command) do |line|
-    rule = line.split(/\s/).first.to_i
-    if rule != 0 && rule != 1
-      command = "iptables -t nat -D POSTROUTING 2"
-      @cyberengine.logger.info { "Deleting old POSTROUTING rule: #{line}" }
-      Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
-    end
+    replace_routes
   end
 end
 
+def replace_routes
+  unless @mobility[:routes].empty?
+    @mobility[:routes].each do |route|
+      command = "ip route replace #{route} dev #{@mobility[:interface]} src #{@mobility[:new_ip]}"
+      @cyberengine.logger.info { "Updating route: #{command}" }
+      Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+    end
+  end
+  unless @mobility[:default_gateway].nil?
+    command = "ip route replace default via #{@mobility[:default_gateway]} dev #{@mobility[:interface]} src #{@mobility[:new_ip]}"
+    @cyberengine.logger.info { "Updating default gateway: #{command}" }
+    Cyberengine.shellexecute(command) { |output| @cyberengine.logger.warn { output } }
+  end
+end
 
 begin
   # Get current properties
@@ -109,7 +118,7 @@ begin
       unless duplicate_address_detected?
         delete_previous_address
         migrate_current_address
-        add_new_address
+        add_new_ip
       end
     rescue StandardError => exception
       @cyberengine.exception_handler(@mobility,exception)
@@ -118,7 +127,7 @@ begin
     # Wait before next switch
     unless @cyberengine.stop
       @cyberengine.logger.info { "Sleeping for #{@mobility[:delay]} seconds between ip changes" }
-      sleep @mobility[:delay]
+      sleep 2 # @mobility[:delay]
     end
   end
 rescue StandardError => exception

@@ -31,7 +31,7 @@ reboot
 2. Install all required packages for: checks, rvm/ruby, database, and apache
 ```bash
 # Basic/Checks
-yum install -y bash tar git curl curl-devel vim bind-utils iputils iptables iproute
+yum install -y bash tar git curl curl-devel vim bind-utils iputils iproute
 # RVM/Ruby (copied from: rvm requirements) 
 yum install -y gcc-c++ patch readline readline-devel zlib zlib-devel libyaml-devel libffi-devel openssl-devel make bzip2 autoconf automake libtool bison iconv-devel
 # Database
@@ -182,7 +182,7 @@ category: 'temp'
 #### IPV4 Mobility
 
 * ipv4/none/mobility
-* This is not a service check and is only defined for whiteteam. This service is used to configure random source ipv4 addresses. A new address is added to an alias interface based on properties. The use of this address is forced by a iptables POSTROUTING option that changes the source address of all outbound traffic from the interface
+* This is not a service check and is only defined for whiteteam. This service is used to configure random source ipv4 addresses. A new address is added to an alias interface based on properties. For this address to be used routes must be provided. Each route will be assigned with the src option set to the new ip.
 
 #### Service
 
@@ -193,10 +193,10 @@ name: "IPV4 Mobility", version: 'ipv4', protocol: 'none'
 #### Properties
 
 ```bash
-category: 'random', property: 'address-range' # Range to pick random address from
-category: 'option', property: 'netmask' # Netmask to use with address-range
+category: 'random', property: 'address-range' # Range to pick random address from: 192.168.1.1-20/24 (sample address would be: 192.168.1.5/24)
 category: 'option', property: 'interface' # Interface to add the random address on
 category: 'option', property: 'dad_test' # Test used to see if arping failed
+category: 'option', property: 'route' # Each route option will be pulled and updated each time a new address is selected. A value of 'default' means the route is an IP and the default gateway.
 category: 'option', property: 'delay' # Delay between address changes
 ```
 
