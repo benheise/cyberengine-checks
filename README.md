@@ -166,6 +166,8 @@ category: 'option'
 category: 'random'
 # Defines a property used to check for success/failure of a check
 category: 'answer'
+# Defines a property used temporarily (mostly in mobility)
+category: 'temp'
 ```
 
 
