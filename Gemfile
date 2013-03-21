@@ -6,6 +6,9 @@ gem 'activerecord'
 # SSH Login
 gem 'net-ssh'
 
+# IRC
+gem 'cinch'
+
 
 # Database options
 # PostgreSQL by default

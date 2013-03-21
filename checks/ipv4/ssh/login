@@ -58,9 +58,9 @@ def execute_request(request,service,defaults)
     response << "Check exceeded #{timeout} second timeout"
   rescue StandardError => exception
     message = exception.message.empty? ? 'None' : exception.message
-    raise "SSH command exection exception - Type: #{exception.class} - Message: #{message} - Command: #{command}"
+    response << "SSH command execution exception - Type: #{exception.class} - Message: #{message} - Command: #{command}"
   end
-  response ? response : "No Response"
+  response.empty? ? "No Response" : response.strip.concat("\r\n")
 end
 
 
@@ -80,6 +80,7 @@ def parse_response(response)
   passed
 end
 
+
 # Loop until terminated (TERM Signal)
 until @cyberengine.stop
   begin
@@ -87,11 +88,11 @@ until @cyberengine.stop
       service.properties.addresses.each do |address|
         # Mark start of check in log
         @cyberengine.logger.info { "Starting check - Team: #{service.team.alias} - Server: #{service.server.name} - Service: #{service.name} - Address: #{address}" }
-    
+
         begin
           # Request command
-          request = build_request(service,address) 
-    
+          request = build_request(service,address)
+
           # Get request output
           response = execute_request(request,service,@cyberengine.defaults)
           request = request.map { |key,value| "#{key.capitalize}: #{value}" }.join("\r\n")

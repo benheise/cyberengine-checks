@@ -94,7 +94,7 @@ module Cyberengine
         response << "Check exceeded #{timeout} second timeout" 
       rescue StandardError => exception
         message = exception.message.empty? ? 'None' : exception.message
-        raise "Shell command exection exception - Type: #{exception.class} - Message: #{message} - Command: #{command}"
+        response << "Shell command execution exception - Type: #{exception.class} - Message: #{message} - Command: #{command}"
       end
   
       # Cant insert empty responses into database, so say "No Response"

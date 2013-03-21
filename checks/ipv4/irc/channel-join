@@ -1,0 +1,256 @@
+#!/usr/bin/env ruby
+require_relative '../../../lib/cyberengine'
+@check = Cyberengine.checkify(__FILE__,ARGV.dup)
+@cyberengine = Cyberengine::Checker.new(@check)
+@cyberengine.signals
+
+
+# Gutted most of https://raw.github.com/injekt/irc-socket/master/lib/irc-socket.rb
+require 'socket'
+class IRCSocket
+  attr_reader :server, :port, :socket, :log
+  def initialize(options)
+    @log = ''
+    @server = options[:server]
+    @port = options[:port] 
+    @ssl = options[:ssl] 
+    @socket = nil
+    @connected = false
+    if block_given?
+      connect
+      yield self      
+    end
+  end
+  
+  
+  def connect
+    socket = TCPSocket.new(@server, @port)
+    if @ssl
+      require 'openssl'
+      ssl = OpenSSL::SSL::SSLContext.new
+      ssl.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      @socket = OpenSSL::SSL::SSLSocket.new(socket, ssl)
+      @socket.sync = true
+      @socket.connect
+    else
+      @socket = socket
+    end
+  rescue Interrupt
+    raise
+  rescue Exception
+    raise
+  else
+    @connected = true
+  end
+
+  # Read the next line in from the server. If no arguments are passed
+  # the line will have the CRLF chomp'ed. Returns nil if no data could be read
+  def read(chompstr="\r\n")
+    if data = @socket.gets("\r\n")
+      logger "< #{data}" 
+      data.chomp!(chompstr) if chompstr
+      data
+    else
+      nil
+    end
+  rescue IOError
+    nil
+  end
+
+  def write(data)
+    logger "> #{data}\r\n" 
+    @socket.write(data + "\r\n")
+  rescue IOError
+    raise
+  end
+
+  # Sugar for #write
+  def raw(*args) # :nodoc:
+    args.last.insert(0, ':') unless args.last.nil?
+    args = args.join(' ').strip
+    write args
+  end
+
+  # More sugar
+  def write_optional(command, *optional)
+    command = "#{command} #{optional.join(' ')}" if optional
+    write(command.strip)
+  end
+
+  def connected?; @connected end
+  def logger(message) @log << message end
+  def pass(password) write("PASS #{password}") end
+  def nick(nickname) write("NICK #{nickname}") end
+  def user(user, mode, unused, realname) write("USER #{user} #{mode} #{unused} :#{realname}") end
+  def oper(name, password) write("OPER #{name} #{password}") end
+  def mode(channel, *modes) write("MODE #{channel} #{modes.join(' ')}") end
+  def quit(message=nil) raw("QUIT", message) end
+  def join(channel, password=nil) write_optional("JOIN #{channel}", password) end
+  def part(channel, message=nil) raw("PART", channel, message) end
+  def topic(channel, topic=nil) raw("TOPIC", channel, topic) end
+  def names(*channels) write("NAMES #{channels.join(',') unless channels.empty?}") end
+  def list(*channels) write("LIST #{channels.join(',') unless channels.empty?}") end
+  def invite(nickname, channel) write("INVITE #{nickname} #{channel}") end
+  def kick(channel, user, comment=nil) raw("KICK", channel, user, comment) end
+  def privmsg(target, message) write("PRIVMSG #{target} :#{message}") end
+  def notice(target, message) write("NOTICE #{target} :#{message}") end
+  def motd(target=nil) write_optional("MOTD", target) end
+  def version(target=nil) write_optional("VERSION", target) end
+  def stats(*params) write_optional("STATS", params) end
+  def time(target=nil) write_optional("TIME", target) end
+  def info(target=nil) write_optional("INFO", target) end
+  def squery(target, message) write("SQUERY #{target} :#{message}") end
+  def who(*params) write_optional("WHO", params) end
+  def whois(*params) write_optional("WHOIS", params) end
+  def whowas(*params) write_optional("WHOWAS", params) end
+  def kill(user, message) write("KILL #{user} :#{message}") end
+  def ping(server) write("PING #{server}") end
+  def pong(server) write("PONG #{server}") end
+  def away(message=nil) raw("AWAY", message) end
+  def users(target=nil) write_optional("USERS", target) end
+  def userhost(*users) write("USERHOST #{users.join(' ')}") end
+  def close; @socket.close if connected?  end
+end
+
+
+def execute_request(request,service,defaults)
+  response = ''
+  address = request[:address]
+  port = request[:port]
+  username = request[:username]
+  password = request[:password]
+  channel = request[:channel]
+  authentication = request[:authentication]
+  timeout = service.properties.option('timeout') || defaults.properties.option('timeout')
+  raise("Missing timeout property") unless timeout
+  timeout = timeout.to_f
+  @cyberengine.logger.debug { "Timeout: #{timeout}" }
+  request.each do |key,value|
+    @cyberengine.logger.debug { "#{key.capitalize}: #{value}" }
+  end
+
+  irc = IRCSocket.new(server: address, port: port, ssl: false)
+  begin
+    Timeout::timeout(timeout) do
+      irc.connect 
+      if irc.connected?
+        irc.nick username
+        irc.user username, 0, "*", username
+        irc.pass password if authentication == 'enabled'
+        while line = irc.read
+          if line.split[1] == '376' # End of MOTD
+            irc.join channel
+            irc.list channel
+            irc.topic channel, 'cyberengine check'
+            irc.privmsg channel, 'cyberengine check'
+            irc.quit 'cyberengine irc check completed'
+          end
+        end
+      end
+    end
+  rescue Timeout::Error => exception
+    response << "Check exceeded #{timeout} second timeout"
+  rescue Errno::ECONNREFUSED => exception
+    response << "Unable to connect: #{exception.class} - Message: #{exception.message}"
+  rescue StandardError => exception
+    message = exception.message.empty? ? 'None' : exception.message
+    response << "IRC check execution exception - Type: #{exception.class} - Message: #{message}"
+  end
+  response.prepend(irc.log)
+  response.empty? ? "No Response" : response.strip.concat("\r\n")
+end
+
+
+def build_request(service,address)
+  request = Hash.new
+  request[:address] = address
+
+  # User
+  user = service.users.random
+  user = @cyberengine.defaults.users.random unless user
+  raise "Missing users" unless user
+  request[:username] = user.username
+  request[:password] = user.password
+
+  # Password
+  authentication = service.properties.option('authentication') || @cyberengine.defaults.properties.option('authentication')
+  request[:authentication] = authentication || 'disabled'
+
+  # Port
+  port = service.properties.option('port') || @cyberengine.defaults.properties.option('port')
+  raise("Missing port property") unless port
+  request[:port] = port.to_i
+
+  # Channel
+  channel = service.properties.random('channel') || @cyberengine.defaults.properties.random('channel')
+  raise("Missing channel property") unless channel
+  request[:channel] = channel
+
+  # Each line regex match
+  @each_line_regex = service.properties.answer('each-line-regex') || @cyberengine.defaults.properties.answer('each-line-regex')
+  @full_text_regex = service.properties.answer('full-text-regex') || @cyberengine.defaults.properties.answer('full-text-regex')
+  raise "Missing answer property: each-line-regex or full-text-regex required" unless @each_line_regex || @full_text_regex
+
+  # Return request hash
+  request
+end
+
+
+# Determine if check passed 
+def parse_response(response)
+  passed = false
+  if @each_line_regex
+    begin @each_line_regex = Regexp.new(@each_line_regex) rescue raise("Invalid each-line-regex: #{@each_line_regex}") end
+    response.each_line do |line|
+      passed = true if line =~ @each_line_regex
+    end
+  end
+  if @full_text_regex
+    begin @full_text_regex = Regexp.new(@full_text_regex) rescue raise("Invalid full-text-regex: #{@each_line_regex}") end
+    passed = true if response =~ @full_text_regex
+  end
+  passed
+end
+
+# Loop until terminated (TERM Signal)
+until @cyberengine.stop
+  begin
+    @cyberengine.services.each do |service|
+      service.properties.addresses.each do |address|
+        # Mark start of check in log
+        @cyberengine.logger.info { "Starting check - Team: #{service.team.alias} - Server: #{service.server.name} - Service: #{service.name} - Address: #{address}" }
+        begin
+          # Request command
+          request = build_request(service,address)
+
+          # Get request output
+          response = execute_request(request,service,@cyberengine.defaults)
+          request = request.map { |key,value| "#{key.capitalize}: #{value}" }.join("\r\n")
+
+          # Passed: true/false
+          passed = parse_response(response)
+
+          # Save check and get result
+          round = service.checks.next_round
+          check = @cyberengine.create_check(service,round,passed,request,response)
+
+          # Check for errors in saving check 
+          raise check.errors.full_messages.join(',') if check.errors.any?
+
+          # Mark end of check in log
+          result = passed ? 'Passed' : 'Failed'
+          @cyberengine.logger.info { "Finished check - Team: #{service.team.alias} - Server: #{service.server.name} - Service: #{service.name} - Address: #{address} - Result: #{result}" }
+
+        rescue StandardError => exception
+          @cyberengine.exception_handler(service,exception)
+        end
+      end
+    end
+    unless @cyberengine.stop
+      @cyberengine.logger.info { "Sleeping for #{@cyberengine.delay} seconds between rounds" }
+      sleep @cyberengine.delay
+    end
+  rescue StandardError => exception
+    @cyberengine.fatal_exception_handler(exception)
+  end
+end

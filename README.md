@@ -416,6 +416,29 @@ category: 'answer', property: 'each-line-regex'
 category: 'answer', property: 'full-text-regex'
 ```
 
+### IRC Channel Join
+
+* ipv4/irc/channel-join
+
+#### Service
+
+```bash
+name: "IRC Channel Join", version: 'ipv4', protocol: 'irc'
+```
+
+#### Properties
+
+```bash
+# Random user picked for nickname/realname
+category: 'address'
+category: 'option', property: 'timeout'
+category: 'option', property: 'authentication' # enabled/disabled, PASS command used if enabled
+category: 'random', property: 'channel'
+category: 'option', property: 'port'
+category: 'answer', property: 'each-line-regex'
+category: 'answer', property: 'full-text-regex'
+```
+
 #### POP3 Login
 
 * ipv4/pop3/login
