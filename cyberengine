@@ -199,6 +199,7 @@ end
 
 
 # Get command
+@args = @args.map { |a| a.gsub(/\Achecks\//,'') } # Remove starting checks/ if added
 @command = @args.first.to_s.downcase || 'help'
 @args.delete_at(0) if @args.first
 

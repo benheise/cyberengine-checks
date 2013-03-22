@@ -220,7 +220,11 @@ category: 'address'
 category: 'option', property: 'timeout'
 category: 'option', property: 'query-type' # A, AAAA, PTR
 category: 'random', property: 'query' # Example value: 'google-public-dns-a.google.com'
+# Answer option not required if using resolves-to-address option below
 category: 'answer', property: '<query-property>' # Example property: google-public-dns-a.google.com', value: '8.8.8.8'
+# Optional
+category: 'option', property: 'resolves-to-address' # enabled/disabled - Used if just want to check that IP resolves and dont care what it resolves to
+category: 'option', property: 'resolves-to-address-regex' # Regex used to check answers and usually matches ip addresses
 ```
 
 ### FTP Download

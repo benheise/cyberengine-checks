@@ -19,10 +19,14 @@ def build_request(service,address)
   # query
   query = service.properties.random('query') 
   raise("Missing query property") unless query
-
+ 
   # answer
   @answer = service.properties.answer(query) 
-  raise "Missing answer property for query '#{query}'" unless @answer
+  @resolves_to_address = @cyberengine.defaults.properties.option('resolves-to-address')
+  @resolves_to_address_regex = @cyberengine.defaults.properties.option('resolves-to-address-regex')
+  raise "Missing answer property for query '#{query}'" if @answer.nil? && @resolves_to_address.nil?
+  raise "Missing resolves-to-address-regex property" if @resolves_to_address && @resolves_to_address_regex.nil?
+  
 
   # Build request
   request << " -t #{query_type} -q #{query} "
@@ -35,11 +39,16 @@ end
 # Determine if check passed (compare all returned answers to real answer)
 def parse_response(response)
   passed = false
+  # Optional global option for check to pass if any ip address returned
+  if @resolves_to_address && @resolves_to_address_regex
+    begin @resolves_to_address_regex = Regexp.new(@resolves_to_address_regex) rescue raise("Invalid resolves-to-address-regex: #{@resolves-to-address-regex}") end
+  end
   answers = response.scan(/;; ANSWER SECTION:\s(.*?);;/m)
-  return passed if answers.empty? # No answers or no server response
+  return passed if answers.empty? # No answers or no server response is obviously a failure
   answers.join("\n").each_line do |line|
     answer = line.split(/[\t\n]+/).last.to_s.strip
-    passed = true if @answer == answer
+    return true if @answer == answer
+    return true if @resolves_to_address == 'enabled' && answer =~ @resolves_to_address_regex
   end
   passed
 end
