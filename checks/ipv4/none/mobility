@@ -127,7 +127,7 @@ begin
     # Wait before next switch
     unless @cyberengine.stop
       @cyberengine.logger.info { "Sleeping for #{@mobility[:delay]} seconds between ip changes" }
-      sleep 2 # @mobility[:delay]
+      sleep @mobility[:delay]
     end
   end
 rescue StandardError => exception

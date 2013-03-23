@@ -114,6 +114,8 @@ until @cyberengine.stop
         rescue StandardError => exception
           @cyberengine.exception_handler(service,exception)
         end
+        @cyberengine.logger.debug { "Sleeping for 2 seconds between teams" }
+        sleep 2
       end
     end
     unless @cyberengine.stop
