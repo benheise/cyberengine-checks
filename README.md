@@ -554,3 +554,6 @@ category: 'random', property: 'command' # command to execute upon logging in
 category: 'answer', property: 'each-line-regex'
 category: 'answer', property: 'full-text-regex'
 ```
+
+## License
+Cyberengine is released under the [MIT License](http://www.opensource.org/licenses/MIT)
